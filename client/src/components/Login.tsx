@@ -9,8 +9,8 @@ import {
   Alert,
   CircularProgress,
 } from '@mui/material';
-import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
+import { authService } from '../services/api';
 
 const Login: React.FC = () => {
   const [formData, setFormData] = useState({
@@ -34,8 +34,7 @@ const Login: React.FC = () => {
     setError('');
 
     try {
-      const res = await axios.post('/api/auth/login', formData);
-      const { token, user } = res.data;
+      const { token, user } = await authService.login(email, password);
       
       // Store token and user data
       localStorage.setItem('token', token);
