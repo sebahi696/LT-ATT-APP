@@ -30,11 +30,20 @@ const Login: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Validate inputs
+    if (!email || !password) {
+      setError('Please enter both email and password');
+      return;
+    }
+
     setLoading(true);
     setError('');
 
     try {
+      console.log('Submitting login form:', { email });
       const { token, user } = await authService.login(email, password);
+      console.log('Login successful:', { role: user.role });
       
       // Store token and user data
       localStorage.setItem('token', token);
@@ -62,6 +71,8 @@ const Login: React.FC = () => {
         setError(err.response.data.errors.map((e: any) => e.msg).join(', '));
       } else if (err.message === 'Network Error') {
         setError('Unable to connect to the server. Please try again later.');
+      } else if (err.response?.status === 400) {
+        setError('Invalid email or password');
       } else {
         setError('An error occurred during login. Please try again.');
       }
@@ -111,6 +122,8 @@ const Login: React.FC = () => {
               value={email}
               onChange={handleChange}
               disabled={loading}
+              error={!!error && !email}
+              helperText={!!error && !email ? 'Email is required' : ''}
             />
             <TextField
               margin="normal"
@@ -124,6 +137,8 @@ const Login: React.FC = () => {
               value={password}
               onChange={handleChange}
               disabled={loading}
+              error={!!error && !password}
+              helperText={!!error && !password ? 'Password is required' : ''}
             />
             <Button
               type="submit"

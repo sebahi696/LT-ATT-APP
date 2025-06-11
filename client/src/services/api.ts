@@ -6,7 +6,8 @@ const api = axios.create({
   baseURL: API_BASE_URL,
   headers: {
     'Content-Type': 'application/json'
-  }
+  },
+  withCredentials: true
 });
 
 // Add request interceptor
@@ -42,10 +43,16 @@ api.interceptors.response.use(
 export const authService = {
   login: async (email: string, password: string): Promise<AuthResponse> => {
     try {
+      console.log('Attempting login with:', { email });
       const response = await api.post('/api/auth/login', { email, password });
+      console.log('Login response:', response.data);
       return response.data;
     } catch (error: any) {
-      console.error('Login error:', error.response || error);
+      console.error('Login error details:', {
+        error: error.message,
+        response: error.response?.data,
+        status: error.response?.status
+      });
       throw error;
     }
   },
