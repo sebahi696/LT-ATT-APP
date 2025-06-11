@@ -56,7 +56,15 @@ const Login: React.FC = () => {
       }
     } catch (err: any) {
       console.error('Login error:', err);
-      setError(err.response?.data?.msg || 'An error occurred during login');
+      if (err.response?.data?.msg) {
+        setError(err.response.data.msg);
+      } else if (err.response?.data?.errors) {
+        setError(err.response.data.errors.map((e: any) => e.msg).join(', '));
+      } else if (err.message === 'Network Error') {
+        setError('Unable to connect to the server. Please try again later.');
+      } else {
+        setError('An error occurred during login. Please try again.');
+      }
     } finally {
       setLoading(false);
     }

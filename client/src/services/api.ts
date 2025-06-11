@@ -9,7 +9,7 @@ const api = axios.create({
   }
 });
 
-// Add token to requests if it exists
+// Add request interceptor
 api.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem('token');
@@ -19,6 +19,21 @@ api.interceptors.request.use(
     return config;
   },
   (error) => {
+    console.error('Request error:', error);
+    return Promise.reject(error);
+  }
+);
+
+// Add response interceptor
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response?.status === 401) {
+      // Clear invalid token
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+      window.location.href = '/login';
+    }
     return Promise.reject(error);
   }
 );
@@ -26,94 +41,174 @@ api.interceptors.request.use(
 // Auth Services
 export const authService = {
   login: async (email: string, password: string): Promise<AuthResponse> => {
-    const response = await api.post('/api/auth/login', { email, password });
-    return response.data;
+    try {
+      const response = await api.post('/api/auth/login', { email, password });
+      return response.data;
+    } catch (error: any) {
+      console.error('Login error:', error.response || error);
+      throw error;
+    }
   },
   
   register: async (userData: Partial<User>): Promise<AuthResponse> => {
-    const response = await api.post('/api/auth/register', userData);
-    return response.data;
+    try {
+      const response = await api.post('/api/auth/register', userData);
+      return response.data;
+    } catch (error: any) {
+      console.error('Registration error:', error.response || error);
+      throw error;
+    }
   },
   
   getCurrentUser: async (): Promise<User> => {
-    const response = await api.get('/api/auth/user');
-    return response.data;
+    try {
+      const response = await api.get('/api/auth/user');
+      return response.data;
+    } catch (error: any) {
+      console.error('Get current user error:', error.response || error);
+      throw error;
+    }
   }
 };
 
 // Employee Services
 export const employeeService = {
   getAll: async (): Promise<Employee[]> => {
-    const response = await api.get('/api/admin/employees');
-    return response.data;
+    try {
+      const response = await api.get('/api/admin/employees');
+      return response.data;
+    } catch (error: any) {
+      console.error('Get employees error:', error.response || error);
+      throw error;
+    }
   },
   
   create: async (employeeData: Partial<Employee>): Promise<Employee> => {
-    const response = await api.post('/api/admin/employees', employeeData);
-    return response.data;
+    try {
+      const response = await api.post('/api/admin/employees', employeeData);
+      return response.data;
+    } catch (error: any) {
+      console.error('Create employee error:', error.response || error);
+      throw error;
+    }
   },
   
   update: async (id: string, employeeData: Partial<Employee>): Promise<Employee> => {
-    const response = await api.put(`/api/admin/employees/${id}`, employeeData);
-    return response.data;
+    try {
+      const response = await api.put(`/api/admin/employees/${id}`, employeeData);
+      return response.data;
+    } catch (error: any) {
+      console.error('Update employee error:', error.response || error);
+      throw error;
+    }
   },
   
   delete: async (id: string): Promise<void> => {
-    await api.delete(`/api/admin/employees/${id}`);
+    try {
+      await api.delete(`/api/admin/employees/${id}`);
+    } catch (error: any) {
+      console.error('Delete employee error:', error.response || error);
+      throw error;
+    }
   }
 };
 
 // Department Services
 export const departmentService = {
   getAll: async (): Promise<Department[]> => {
-    const response = await api.get('/api/admin/departments');
-    return response.data;
+    try {
+      const response = await api.get('/api/admin/departments');
+      return response.data;
+    } catch (error: any) {
+      console.error('Get departments error:', error.response || error);
+      throw error;
+    }
   },
   
   create: async (departmentData: Partial<Department>): Promise<Department> => {
-    const response = await api.post('/api/admin/departments', departmentData);
-    return response.data;
+    try {
+      const response = await api.post('/api/admin/departments', departmentData);
+      return response.data;
+    } catch (error: any) {
+      console.error('Create department error:', error.response || error);
+      throw error;
+    }
   },
   
   update: async (id: string, departmentData: Partial<Department>): Promise<Department> => {
-    const response = await api.put(`/api/admin/departments/${id}`, departmentData);
-    return response.data;
+    try {
+      const response = await api.put(`/api/admin/departments/${id}`, departmentData);
+      return response.data;
+    } catch (error: any) {
+      console.error('Update department error:', error.response || error);
+      throw error;
+    }
   },
   
   delete: async (id: string): Promise<void> => {
-    await api.delete(`/api/admin/departments/${id}`);
+    try {
+      await api.delete(`/api/admin/departments/${id}`);
+    } catch (error: any) {
+      console.error('Delete department error:', error.response || error);
+      throw error;
+    }
   }
 };
 
 // Attendance Services
 export const attendanceService = {
   getAll: async (): Promise<Attendance[]> => {
-    const response = await api.get('/api/attendance');
-    return response.data;
+    try {
+      const response = await api.get('/api/attendance');
+      return response.data;
+    } catch (error: any) {
+      console.error('Get attendance error:', error.response || error);
+      throw error;
+    }
   },
   
   markAttendance: async (qrCode: string, location: [number, number]): Promise<Attendance> => {
-    const response = await api.post('/api/attendance/mark', { qrCode, location });
-    return response.data;
+    try {
+      const response = await api.post('/api/attendance/mark', { qrCode, location });
+      return response.data;
+    } catch (error: any) {
+      console.error('Mark attendance error:', error.response || error);
+      throw error;
+    }
   },
   
   getReport: async (startDate: string, endDate: string): Promise<Attendance[]> => {
-    const response = await api.get('/api/attendance/report', {
-      params: { startDate, endDate }
-    });
-    return response.data;
+    try {
+      const response = await api.get('/api/attendance/report', {
+        params: { startDate, endDate }
+      });
+      return response.data;
+    } catch (error: any) {
+      console.error('Get attendance report error:', error.response || error);
+      throw error;
+    }
   }
 };
 
 // QR Code Services
 export const qrCodeService = {
   generate: async (departmentId: string, location: [number, number]): Promise<QRCode> => {
-    const response = await api.post('/api/admin/qr/generate', { departmentId, location });
-    return response.data;
+    try {
+      const response = await api.post('/api/admin/qr/generate', { departmentId, location });
+      return response.data;
+    } catch (error: any) {
+      console.error('Generate QR code error:', error.response || error);
+      throw error;
+    }
   },
   
   validate: async (code: string): Promise<boolean> => {
-    const response = await api.post('/api/attendance/qr/validate', { code });
-    return response.data.valid;
+    try {
+      const response = await api.post('/api/attendance/qr/validate', { code });
+      return response.data.valid;
+    } catch (error: any) {
+      console.error('Validate QR code error:', error.response || error);
+      throw error;
+    }
   }
 }; 

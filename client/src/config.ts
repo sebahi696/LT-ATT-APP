@@ -1,4 +1,4 @@
-export const API_BASE_URL = process.env.REACT_APP_API_URL || 'https://lt-att-backend.onrender.com';
+export const API_BASE_URL = 'https://lt-att-backend.onrender.com';
 
 export const API_ENDPOINTS = {
   // Auth endpoints
