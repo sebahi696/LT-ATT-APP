@@ -8,7 +8,7 @@ const baseURL = isNgrok
   ? `${window.location.protocol}//${window.location.hostname}`  // Use the same ngrok domain
   : isDevelopment 
     ? 'http://localhost:5001' 
-    : '/api';
+    : 'https://lt-att-backend.onrender.com';
 
 const api = axios.create({
   baseURL,
@@ -36,6 +36,8 @@ export default api;
 // API Configuration
 const API_BASE_URL = isNgrok
   ? window.location.href.replace(/https:\/\/[^/]+/, 'https://04f5-94-187-2-59.ngrok-free.app')
-  : 'http://localhost:5001';
+  : isDevelopment 
+    ? 'http://localhost:5001'
+    : 'https://lt-att-backend.onrender.com';
 
 export const getApiUrl = (endpoint: string) => `${API_BASE_URL}${endpoint}`; 

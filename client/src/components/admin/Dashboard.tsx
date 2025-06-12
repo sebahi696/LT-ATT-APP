@@ -20,7 +20,7 @@ import {
   Cancel as CancelIcon,
   Today as TodayIcon,
 } from '@mui/icons-material';
-import axios from 'axios';
+import api from '../../api/config';
 
 interface DashboardStats {
   totalEmployees: number;
@@ -53,24 +53,40 @@ const Dashboard: React.FC = () => {
         const token = localStorage.getItem('token');
         if (!token) {
           setError('Authentication token not found');
+          setLoading(false);
           return;
         }
 
-        const config = {
-          headers: { 'x-auth-token': token }
-        };
-
-        const [statsRes, attendanceRes] = await Promise.all([
-          axios.get('/api/admin/dashboard/stats', config),
-          axios.get('/api/admin/dashboard/recent-attendance', config),
+        // For now, let's get basic data from existing endpoints
+        const [employeesRes] = await Promise.all([
+          api.get('/api/admin/employees')
         ]);
 
-        setStats(statsRes.data);
-        setRecentAttendance(attendanceRes.data);
+        // Calculate basic stats from employees data
+        const employees = employeesRes.data || [];
+        setStats({
+          totalEmployees: employees.length,
+          todayAttendance: 0, // Will be implemented later
+          presentToday: 0,    // Will be implemented later
+          absentToday: 0,     // Will be implemented later
+        });
+        
+        // Set empty attendance for now
+        setRecentAttendance([]);
         setError('');
       } catch (err: any) {
         console.error('Error fetching dashboard data:', err);
-        setError(err.response?.data?.msg || 'Error loading dashboard data');
+        if (err.response?.status === 401) {
+          setError('Authentication failed. Please log in again.');
+          // Optionally redirect to login
+          localStorage.removeItem('token');
+          localStorage.removeItem('user');
+          window.location.href = '/login';
+        } else {
+          setError(err.response?.data?.msg || 'Error loading dashboard data');
+        }
+        // Set default values to prevent map errors
+        setRecentAttendance([]);
       } finally {
         setLoading(false);
       }
@@ -169,29 +185,39 @@ const Dashboard: React.FC = () => {
               </TableRow>
             </TableHead>
             <TableBody>
-              {recentAttendance.map((record, index) => (
-                <TableRow key={index}>
-                  <TableCell>{record.employeeName}</TableCell>
-                  <TableCell>
-                    <Box
-                      sx={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        color: record.status === 'present' ? 'success.main' : 'error.main',
-                      }}
-                    >
-                      {record.status === 'present' ? (
-                        <CheckCircleIcon sx={{ mr: 1 }} fontSize="small" />
-                      ) : (
-                        <CancelIcon sx={{ mr: 1 }} fontSize="small" />
-                      )}
-                      {record.status.charAt(0).toUpperCase() + record.status.slice(1)}
-                    </Box>
+              {recentAttendance && recentAttendance.length > 0 ? (
+                recentAttendance.map((record, index) => (
+                  <TableRow key={index}>
+                    <TableCell>{record.employeeName}</TableCell>
+                    <TableCell>
+                      <Box
+                        sx={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          color: record.status === 'present' ? 'success.main' : 'error.main',
+                        }}
+                      >
+                        {record.status === 'present' ? (
+                          <CheckCircleIcon sx={{ mr: 1 }} fontSize="small" />
+                        ) : (
+                          <CancelIcon sx={{ mr: 1 }} fontSize="small" />
+                        )}
+                        {record.status.charAt(0).toUpperCase() + record.status.slice(1)}
+                      </Box>
+                    </TableCell>
+                    <TableCell>{record.checkInTime || '-'}</TableCell>
+                    <TableCell>{record.checkOutTime || '-'}</TableCell>
+                  </TableRow>
+                ))
+              ) : (
+                <TableRow>
+                  <TableCell colSpan={4} align="center">
+                    <Typography variant="body2" color="textSecondary">
+                      No recent attendance data available
+                    </Typography>
                   </TableCell>
-                  <TableCell>{record.checkInTime || '-'}</TableCell>
-                  <TableCell>{record.checkOutTime || '-'}</TableCell>
                 </TableRow>
-              ))}
+              )}
             </TableBody>
           </Table>
         </TableContainer>
