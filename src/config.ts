@@ -34,8 +34,8 @@ export const API_ENDPOINTS = {
   VALIDATE_QR: '/api/attendance/qr/validate',
   
   // Dashboard endpoints
-  GET_DASHBOARD_STATS: '/api/admin/dashboard/stats',
-  GET_RECENT_ATTENDANCE: '/api/admin/dashboard/recent-attendance',
+  GET_DASHBOARD_STATS: '/api/admin/stats',
+  GET_RECENT_ATTENDANCE: '/api/admin/recent-attendance',
   
   // Reports endpoints
   GET_SALARY_REPORT: '/api/admin/reports/salary'

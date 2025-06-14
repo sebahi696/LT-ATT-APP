@@ -19,27 +19,31 @@ const Dashboard: React.FC = () => {
   useEffect(() => {
     const fetchDashboardData = async () => {
       try {
-        const [statsData, attendanceData] = await Promise.all([
+        setLoading(true);
+        setError('');
+
+        // Fetch stats and attendance data in parallel
+        const [statsResponse, attendanceResponse] = await Promise.all([
           dashboardService.getStats(),
           dashboardService.getRecentAttendance()
         ]);
 
-        // Ensure statsData is valid
-        if (!statsData || typeof statsData !== 'object') {
+        // Ensure stats data is valid
+        if (!statsResponse || typeof statsResponse !== 'object') {
           throw new Error('Invalid stats data received');
         }
 
-        // Ensure attendanceData is an array
-        const validAttendanceData = Array.isArray(attendanceData) ? attendanceData : [];
+        // Ensure attendance data is an array
+        const validAttendanceData = Array.isArray(attendanceResponse) ? attendanceResponse : [];
 
+        // Update state with validated data
         setStats({
-          totalEmployees: statsData.totalEmployees || 0,
-          todayAttendance: statsData.todayAttendance || 0,
-          presentToday: statsData.presentToday || 0,
-          absentToday: statsData.absentToday || 0,
+          totalEmployees: statsResponse.totalEmployees || 0,
+          todayAttendance: statsResponse.todayAttendance || 0,
+          presentToday: statsResponse.presentToday || 0,
+          absentToday: statsResponse.absentToday || 0,
         });
         setRecentAttendance(validAttendanceData);
-        setError('');
       } catch (err: any) {
         console.error('Error fetching dashboard data:', err);
         setError(err.message || ERROR_MESSAGES.DEFAULT);
