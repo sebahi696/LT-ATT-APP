@@ -1,37 +1,28 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
-  Container,
   Box,
-  Typography,
+  Card,
+  CardContent,
   TextField,
   Button,
-  Paper,
-  Alert,
+  Typography,
   CircularProgress,
+  Alert
 } from '@mui/material';
-import { useNavigate } from 'react-router-dom';
 import { authService } from '../services/api';
+import { ERROR_MESSAGES, SUCCESS_MESSAGES } from '../config';
 
 const Login: React.FC = () => {
-  const [formData, setFormData] = useState({
-    email: '',
-    password: '',
-  });
-  const [error, setError] = useState<string>('');
-  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
-
-  const { email, password } = formData;
-
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
-    setError(''); // Clear error when user types
-  };
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Validate inputs
     if (!email || !password) {
       setError('Please enter both email and password');
       return;
@@ -41,9 +32,7 @@ const Login: React.FC = () => {
     setError('');
 
     try {
-      console.log('Submitting login form:', { email });
       const { token, user } = await authService.login(email, password);
-      console.log('Login successful:', { role: user.role });
       
       // Store token and user data
       localStorage.setItem('token', token);
@@ -58,101 +47,82 @@ const Login: React.FC = () => {
           navigate('/manager/dashboard');
           break;
         case 'employee':
-          navigate('/employee/dashboard');
+          navigate('/employee/attendance');
           break;
         default:
           setError('Invalid user role');
       }
     } catch (err: any) {
       console.error('Login error:', err);
-      if (err.response?.data?.msg) {
-        setError(err.response.data.msg);
-      } else if (err.response?.data?.errors) {
-        setError(err.response.data.errors.map((e: any) => e.msg).join(', '));
-      } else if (err.message === 'Network Error') {
-        setError('Unable to connect to the server. Please try again later.');
-      } else if (err.response?.status === 400) {
-        setError('Invalid email or password');
-      } else {
-        setError('An error occurred during login. Please try again.');
-      }
+      setError(err.message || ERROR_MESSAGES.DEFAULT);
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <Container component="main" maxWidth="xs">
-      <Box
-        sx={{
-          marginTop: 8,
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-        }}
-      >
-        <Paper
-          elevation={3}
-          sx={{
-            padding: 4,
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            width: '100%',
-          }}
-        >
-          <Typography component="h1" variant="h5" sx={{ mb: 3 }}>
+    <Box
+      sx={{
+        minHeight: '100vh',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        bgcolor: 'background.default',
+        p: 2
+      }}
+    >
+      <Card sx={{ maxWidth: 400, width: '100%' }}>
+        <CardContent sx={{ p: 4 }}>
+          <Typography variant="h4" component="h1" align="center" gutterBottom>
             La Tavola Attendance
           </Typography>
+          
+          <Typography variant="subtitle1" align="center" color="text.secondary" sx={{ mb: 4 }}>
+            Sign in to your account
+          </Typography>
+
           {error && (
-            <Alert severity="error" sx={{ width: '100%', mb: 2 }}>
+            <Alert severity="error" sx={{ mb: 2 }}>
               {error}
             </Alert>
           )}
-          <Box component="form" onSubmit={handleSubmit} sx={{ mt: 1, width: '100%' }}>
+
+          <form onSubmit={handleSubmit}>
             <TextField
-              margin="normal"
-              required
               fullWidth
-              id="email"
-              label="Email Address"
-              name="email"
-              autoComplete="email"
-              autoFocus
+              label="Email"
+              type="email"
               value={email}
-              onChange={handleChange}
-              disabled={loading}
-              error={!!error && !email}
-              helperText={!!error && !email ? 'Email is required' : ''}
-            />
-            <TextField
+              onChange={(e) => setEmail(e.target.value)}
               margin="normal"
               required
+              autoFocus
+            />
+            
+            <TextField
               fullWidth
-              name="password"
               label="Password"
               type="password"
-              id="password"
-              autoComplete="current-password"
               value={password}
-              onChange={handleChange}
-              disabled={loading}
-              error={!!error && !password}
-              helperText={!!error && !password ? 'Password is required' : ''}
+              onChange={(e) => setPassword(e.target.value)}
+              margin="normal"
+              required
             />
+
             <Button
               type="submit"
               fullWidth
               variant="contained"
-              sx={{ mt: 3, mb: 2, height: 48 }}
+              size="large"
               disabled={loading}
+              sx={{ mt: 3 }}
             >
-              {loading ? <CircularProgress size={24} color="inherit" /> : 'Sign In'}
+              {loading ? <CircularProgress size={24} /> : 'Sign In'}
             </Button>
-          </Box>
-        </Paper>
-      </Box>
-    </Container>
+          </form>
+        </CardContent>
+      </Card>
+    </Box>
   );
 };
 

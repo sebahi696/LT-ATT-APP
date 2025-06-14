@@ -1,5 +1,5 @@
-import axios from 'axios';
-import { API_BASE_URL } from '../config';
+import axios, { AxiosError } from 'axios';
+import { API_BASE_URL, API_ENDPOINTS, ERROR_MESSAGES } from '../config';
 import type { AuthResponse, User, Employee, Department, Attendance, QRCode } from '../types';
 
 const api = axios.create({
@@ -28,14 +28,20 @@ api.interceptors.request.use(
 // Add response interceptor
 api.interceptors.response.use(
   (response) => response,
-  (error) => {
+  (error: AxiosError) => {
     if (error.response?.status === 401) {
-      // Clear invalid token
       localStorage.removeItem('token');
       localStorage.removeItem('user');
       window.location.href = '/login';
+      return Promise.reject(new Error(ERROR_MESSAGES.AUTH_ERROR));
     }
-    return Promise.reject(error);
+    
+    if (!error.response) {
+      return Promise.reject(new Error(ERROR_MESSAGES.NETWORK_ERROR));
+    }
+    
+    const errorMessage = error.response.data?.message || error.response.data?.msg || ERROR_MESSAGES.DEFAULT;
+    return Promise.reject(new Error(errorMessage));
   }
 );
 
@@ -43,36 +49,30 @@ api.interceptors.response.use(
 export const authService = {
   login: async (email: string, password: string): Promise<AuthResponse> => {
     try {
-      console.log('Attempting login with:', { email });
-      const response = await api.post('/api/auth/login', { email, password });
-      console.log('Login response:', response.data);
+      const response = await api.post(API_ENDPOINTS.LOGIN, { email, password });
       return response.data;
-    } catch (error: any) {
-      console.error('Login error details:', {
-        error: error.message,
-        response: error.response?.data,
-        status: error.response?.status
-      });
+    } catch (error) {
+      console.error('Login error:', error);
       throw error;
     }
   },
   
   register: async (userData: Partial<User>): Promise<AuthResponse> => {
     try {
-      const response = await api.post('/api/auth/register', userData);
+      const response = await api.post(API_ENDPOINTS.REGISTER, userData);
       return response.data;
-    } catch (error: any) {
-      console.error('Registration error:', error.response || error);
+    } catch (error) {
+      console.error('Registration error:', error);
       throw error;
     }
   },
   
   getCurrentUser: async (): Promise<User> => {
     try {
-      const response = await api.get('/api/auth/user');
+      const response = await api.get(API_ENDPOINTS.GET_USER);
       return response.data;
-    } catch (error: any) {
-      console.error('Get current user error:', error.response || error);
+    } catch (error) {
+      console.error('Get current user error:', error);
       throw error;
     }
   }
@@ -82,39 +82,39 @@ export const authService = {
 export const employeeService = {
   getAll: async (): Promise<Employee[]> => {
     try {
-      const response = await api.get('/api/admin/employees');
+      const response = await api.get(API_ENDPOINTS.GET_EMPLOYEES);
       return response.data;
-    } catch (error: any) {
-      console.error('Get employees error:', error.response || error);
+    } catch (error) {
+      console.error('Get employees error:', error);
       throw error;
     }
   },
   
   create: async (employeeData: Partial<Employee>): Promise<Employee> => {
     try {
-      const response = await api.post('/api/admin/employees', employeeData);
+      const response = await api.post(API_ENDPOINTS.ADD_EMPLOYEE, employeeData);
       return response.data;
-    } catch (error: any) {
-      console.error('Create employee error:', error.response || error);
+    } catch (error) {
+      console.error('Create employee error:', error);
       throw error;
     }
   },
   
   update: async (id: string, employeeData: Partial<Employee>): Promise<Employee> => {
     try {
-      const response = await api.put(`/api/admin/employees/${id}`, employeeData);
+      const response = await api.put(`${API_ENDPOINTS.UPDATE_EMPLOYEE}/${id}`, employeeData);
       return response.data;
-    } catch (error: any) {
-      console.error('Update employee error:', error.response || error);
+    } catch (error) {
+      console.error('Update employee error:', error);
       throw error;
     }
   },
   
   delete: async (id: string): Promise<void> => {
     try {
-      await api.delete(`/api/admin/employees/${id}`);
-    } catch (error: any) {
-      console.error('Delete employee error:', error.response || error);
+      await api.delete(`${API_ENDPOINTS.DELETE_EMPLOYEE}/${id}`);
+    } catch (error) {
+      console.error('Delete employee error:', error);
       throw error;
     }
   }
@@ -124,39 +124,39 @@ export const employeeService = {
 export const departmentService = {
   getAll: async (): Promise<Department[]> => {
     try {
-      const response = await api.get('/api/admin/departments');
+      const response = await api.get(API_ENDPOINTS.GET_DEPARTMENTS);
       return response.data;
-    } catch (error: any) {
-      console.error('Get departments error:', error.response || error);
+    } catch (error) {
+      console.error('Get departments error:', error);
       throw error;
     }
   },
   
   create: async (departmentData: Partial<Department>): Promise<Department> => {
     try {
-      const response = await api.post('/api/admin/departments', departmentData);
+      const response = await api.post(API_ENDPOINTS.ADD_DEPARTMENT, departmentData);
       return response.data;
-    } catch (error: any) {
-      console.error('Create department error:', error.response || error);
+    } catch (error) {
+      console.error('Create department error:', error);
       throw error;
     }
   },
   
   update: async (id: string, departmentData: Partial<Department>): Promise<Department> => {
     try {
-      const response = await api.put(`/api/admin/departments/${id}`, departmentData);
+      const response = await api.put(`${API_ENDPOINTS.UPDATE_DEPARTMENT}/${id}`, departmentData);
       return response.data;
-    } catch (error: any) {
-      console.error('Update department error:', error.response || error);
+    } catch (error) {
+      console.error('Update department error:', error);
       throw error;
     }
   },
   
   delete: async (id: string): Promise<void> => {
     try {
-      await api.delete(`/api/admin/departments/${id}`);
-    } catch (error: any) {
-      console.error('Delete department error:', error.response || error);
+      await api.delete(`${API_ENDPOINTS.DELETE_DEPARTMENT}/${id}`);
+    } catch (error) {
+      console.error('Delete department error:', error);
       throw error;
     }
   }
@@ -166,32 +166,32 @@ export const departmentService = {
 export const attendanceService = {
   getAll: async (): Promise<Attendance[]> => {
     try {
-      const response = await api.get('/api/attendance');
+      const response = await api.get(API_ENDPOINTS.GET_ATTENDANCE);
       return response.data;
-    } catch (error: any) {
-      console.error('Get attendance error:', error.response || error);
+    } catch (error) {
+      console.error('Get attendance error:', error);
       throw error;
     }
   },
   
   markAttendance: async (qrCode: string, location: [number, number]): Promise<Attendance> => {
     try {
-      const response = await api.post('/api/attendance/mark', { qrCode, location });
+      const response = await api.post(API_ENDPOINTS.MARK_ATTENDANCE, { qrCode, location });
       return response.data;
-    } catch (error: any) {
-      console.error('Mark attendance error:', error.response || error);
+    } catch (error) {
+      console.error('Mark attendance error:', error);
       throw error;
     }
   },
   
   getReport: async (startDate: string, endDate: string): Promise<Attendance[]> => {
     try {
-      const response = await api.get('/api/attendance/report', {
+      const response = await api.get(API_ENDPOINTS.GET_ATTENDANCE_REPORT, {
         params: { startDate, endDate }
       });
       return response.data;
-    } catch (error: any) {
-      console.error('Get attendance report error:', error.response || error);
+    } catch (error) {
+      console.error('Get attendance report error:', error);
       throw error;
     }
   }
@@ -201,20 +201,58 @@ export const attendanceService = {
 export const qrCodeService = {
   generate: async (departmentId: string, location: [number, number]): Promise<QRCode> => {
     try {
-      const response = await api.post('/api/admin/qr/generate', { departmentId, location });
+      const response = await api.post(API_ENDPOINTS.GENERATE_QR, { departmentId, location });
       return response.data;
-    } catch (error: any) {
-      console.error('Generate QR code error:', error.response || error);
+    } catch (error) {
+      console.error('Generate QR code error:', error);
       throw error;
     }
   },
   
   validate: async (code: string): Promise<boolean> => {
     try {
-      const response = await api.post('/api/attendance/qr/validate', { code });
+      const response = await api.post(API_ENDPOINTS.VALIDATE_QR, { code });
       return response.data.valid;
-    } catch (error: any) {
-      console.error('Validate QR code error:', error.response || error);
+    } catch (error) {
+      console.error('Validate QR code error:', error);
+      throw error;
+    }
+  }
+};
+
+// Dashboard Services
+export const dashboardService = {
+  getStats: async () => {
+    try {
+      const response = await api.get(API_ENDPOINTS.GET_DASHBOARD_STATS);
+      return response.data;
+    } catch (error) {
+      console.error('Get dashboard stats error:', error);
+      throw error;
+    }
+  },
+  
+  getRecentAttendance: async () => {
+    try {
+      const response = await api.get(API_ENDPOINTS.GET_RECENT_ATTENDANCE);
+      return response.data;
+    } catch (error) {
+      console.error('Get recent attendance error:', error);
+      throw error;
+    }
+  }
+};
+
+// Reports Services
+export const reportsService = {
+  getSalaryReport: async (startDate: string, endDate: string, department?: string) => {
+    try {
+      const response = await api.get(API_ENDPOINTS.GET_SALARY_REPORT, {
+        params: { startDate, endDate, department }
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Get salary report error:', error);
       throw error;
     }
   }

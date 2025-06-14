@@ -5,20 +5,16 @@ import {
   Button,
   Alert,
   CircularProgress,
-  Paper,
   Card,
   CardContent,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  Select,
-  MenuItem,
   FormControl,
   InputLabel,
+  Select,
+  MenuItem,
 } from '@mui/material';
 import { Html5Qrcode } from 'html5-qrcode';
-import axios from 'axios';
+import { attendanceService } from '../../services/api';
+import { ERROR_MESSAGES, SUCCESS_MESSAGES } from '../../config';
 
 interface CameraDevice {
   id: string;
@@ -31,12 +27,9 @@ const QRScanner: React.FC = () => {
   const [success, setSuccess] = useState('');
   const [loading, setLoading] = useState(false);
   const [lastScan, setLastScan] = useState<Date | null>(null);
-  const [cameraPermission, setCameraPermission] = useState<PermissionState | null>(null);
-  const [showPermissionDialog, setShowPermissionDialog] = useState(false);
   const [availableCameras, setAvailableCameras] = useState<CameraDevice[]>([]);
   const [selectedCamera, setSelectedCamera] = useState('');
   const html5QrCodeRef = useRef<Html5Qrcode | null>(null);
-  const qrReaderRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     const lastScanTime = localStorage.getItem('lastScan');
@@ -52,8 +45,6 @@ const QRScanner: React.FC = () => {
   const listCameras = async () => {
     try {
       const devices = await Html5Qrcode.getCameras();
-      console.log('Available cameras:', devices);
-      
       const formattedDevices = devices.map(device => ({
         id: device.id,
         label: device.label || `Camera ${device.id}`
@@ -70,7 +61,7 @@ const QRScanner: React.FC = () => {
       return formattedDevices;
     } catch (err) {
       console.error('Error listing cameras:', err);
-      setError('Failed to access camera list. Please ensure camera permissions are granted.');
+      setError(ERROR_MESSAGES.DEFAULT);
       return [];
     }
   };
@@ -112,11 +103,9 @@ const QRScanner: React.FC = () => {
         handleScanSuccess,
         handleScanError
       );
-
-      console.log('Scanner started successfully');
     } catch (err) {
       console.error('Error starting scanner:', err);
-      setError('Failed to start camera. Please ensure camera permissions are granted and try again.');
+      setError(ERROR_MESSAGES.DEFAULT);
       setScanning(false);
       if (html5QrCodeRef.current) {
         await html5QrCodeRef.current.clear();
@@ -133,19 +122,23 @@ const QRScanner: React.FC = () => {
     setSuccess('');
 
     try {
-      const token = localStorage.getItem('token');
-      if (!token) {
-        setError('Authentication token not found');
-        return;
-      }
+      // Get current location
+      const position = await new Promise<GeolocationPosition>((resolve, reject) => {
+        navigator.geolocation.getCurrentPosition(resolve, reject, {
+          enableHighAccuracy: true,
+          timeout: 5000,
+          maximumAge: 0
+        });
+      });
 
-      const response = await axios.post(
-        '/api/employee/attendance/scan',
-        { qrCode: decodedText },
-        { headers: { 'x-auth-token': token } }
-      );
+      const location: [number, number] = [
+        position.coords.longitude,
+        position.coords.latitude
+      ];
 
-      setSuccess(response.data.msg);
+      await attendanceService.markAttendance(decodedText, location);
+      
+      setSuccess(SUCCESS_MESSAGES.SAVE);
       const now = new Date();
       localStorage.setItem('lastScan', now.toISOString());
       setLastScan(now);
@@ -153,7 +146,7 @@ const QRScanner: React.FC = () => {
       await stopScanning();
     } catch (err: any) {
       console.error('Error scanning QR code:', err);
-      setError(err.response?.data?.msg || 'Error scanning QR code');
+      setError(err.message || ERROR_MESSAGES.DEFAULT);
     } finally {
       setLoading(false);
     }
@@ -260,34 +253,6 @@ const QRScanner: React.FC = () => {
           )}
         </CardContent>
       </Card>
-
-      {lastScan && (
-        <Typography
-          variant="body2"
-          color="textSecondary"
-          align="center"
-          sx={{ mt: 2 }}
-        >
-          Last successful scan: {lastScan.toLocaleString()}
-        </Typography>
-      )}
-
-      <Dialog
-        open={showPermissionDialog}
-        onClose={() => setShowPermissionDialog(false)}
-      >
-        <DialogTitle>Camera Permission Required</DialogTitle>
-        <DialogContent>
-          <Typography>
-            To scan QR codes, you need to enable camera access in your browser settings.
-          </Typography>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setShowPermissionDialog(false)}>
-            Close
-          </Button>
-        </DialogActions>
-      </Dialog>
     </Box>
   );
 };

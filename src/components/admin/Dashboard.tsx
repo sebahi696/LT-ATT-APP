@@ -1,40 +1,9 @@
-import React, { useState, useEffect } from 'react';
-import {
-  Grid,
-  Paper,
-  Typography,
-  Box,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  Card,
-  CardContent,
-  CircularProgress,
-} from '@mui/material';
-import {
-  People as PeopleIcon,
-  CheckCircle as CheckCircleIcon,
-  Cancel as CancelIcon,
-  Today as TodayIcon,
-} from '@mui/icons-material';
-import axios from 'axios';
-
-interface DashboardStats {
-  totalEmployees: number;
-  todayAttendance: number;
-  presentToday: number;
-  absentToday: number;
-}
-
-interface AttendanceRecord {
-  employeeName: string;
-  status: 'present' | 'absent';
-  checkInTime?: string;
-  checkOutTime?: string;
-}
+import React, { useEffect, useState } from 'react';
+import { Box, Card, CardContent, Typography, CircularProgress, Alert } from '@mui/material';
+import { PeopleAlt, AccessTime, CheckCircle, Cancel } from '@mui/icons-material';
+import { dashboardService } from '../../services/api';
+import { ERROR_MESSAGES } from '../../config';
+import type { DashboardStats, AttendanceRecord } from '../../types';
 
 const Dashboard: React.FC = () => {
   const [stats, setStats] = useState<DashboardStats>({
@@ -50,27 +19,17 @@ const Dashboard: React.FC = () => {
   useEffect(() => {
     const fetchDashboardData = async () => {
       try {
-        const token = localStorage.getItem('token');
-        if (!token) {
-          setError('Authentication token not found');
-          return;
-        }
-
-        const config = {
-          headers: { 'x-auth-token': token }
-        };
-
-        const [statsRes, attendanceRes] = await Promise.all([
-          axios.get('/api/admin/dashboard/stats', config),
-          axios.get('/api/admin/dashboard/recent-attendance', config),
+        const [statsData, attendanceData] = await Promise.all([
+          dashboardService.getStats(),
+          dashboardService.getRecentAttendance()
         ]);
 
-        setStats(statsRes.data);
-        setRecentAttendance(attendanceRes.data);
+        setStats(statsData);
+        setRecentAttendance(attendanceData);
         setError('');
       } catch (err: any) {
         console.error('Error fetching dashboard data:', err);
-        setError(err.response?.data?.msg || 'Error loading dashboard data');
+        setError(err.message || ERROR_MESSAGES.DEFAULT);
       } finally {
         setLoading(false);
       }
@@ -106,96 +65,70 @@ const Dashboard: React.FC = () => {
   if (error) {
     return (
       <Box sx={{ p: 3 }}>
-        <Typography color="error" variant="h6">
-          {error}
-        </Typography>
+        <Alert severity="error">{error}</Alert>
       </Box>
     );
   }
 
   return (
-    <Box>
-      <Typography variant="h4" sx={{ mb: 4 }}>
-        Dashboard Overview
+    <Box sx={{ p: 3 }}>
+      <Typography variant="h4" component="h1" gutterBottom>
+        Dashboard
       </Typography>
       
-      <Grid container spacing={3} sx={{ mb: 4 }}>
-        <Grid item xs={12} sm={6} md={3}>
-          <StatCard
-            title="Total Employees"
-            value={stats.totalEmployees}
-            icon={<PeopleIcon color="primary" />}
-            color="primary"
-          />
-        </Grid>
-        <Grid item xs={12} sm={6} md={3}>
-          <StatCard
-            title="Today's Attendance"
-            value={stats.todayAttendance}
-            icon={<TodayIcon color="info" />}
-            color="info"
-          />
-        </Grid>
-        <Grid item xs={12} sm={6} md={3}>
-          <StatCard
-            title="Present Today"
-            value={stats.presentToday}
-            icon={<CheckCircleIcon color="success" />}
-            color="success"
-          />
-        </Grid>
-        <Grid item xs={12} sm={6} md={3}>
-          <StatCard
-            title="Absent Today"
-            value={stats.absentToday}
-            icon={<CancelIcon color="error" />}
-            color="error"
-          />
-        </Grid>
-      </Grid>
+      <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 3, mb: 4 }}>
+        <StatCard
+          title="Total Employees"
+          value={stats.totalEmployees}
+          icon={<PeopleAlt color="primary" />}
+          color="primary"
+        />
+        <StatCard
+          title="Today's Attendance"
+          value={stats.todayAttendance}
+          icon={<AccessTime color="info" />}
+          color="info"
+        />
+        <StatCard
+          title="Present Today"
+          value={stats.presentToday}
+          icon={<CheckCircle color="success" />}
+          color="success"
+        />
+        <StatCard
+          title="Absent Today"
+          value={stats.absentToday}
+          icon={<Cancel color="error" />}
+          color="error"
+        />
+      </Box>
 
-      <Paper sx={{ p: 2 }}>
-        <Typography variant="h6" sx={{ mb: 2 }}>
-          Recent Attendance
-        </Typography>
-        <TableContainer>
-          <Table>
-            <TableHead>
-              <TableRow>
-                <TableCell>Employee Name</TableCell>
-                <TableCell>Status</TableCell>
-                <TableCell>Check In</TableCell>
-                <TableCell>Check Out</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {recentAttendance.map((record, index) => (
-                <TableRow key={index}>
-                  <TableCell>{record.employeeName}</TableCell>
-                  <TableCell>
-                    <Box
-                      sx={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        color: record.status === 'present' ? 'success.main' : 'error.main',
-                      }}
-                    >
-                      {record.status === 'present' ? (
-                        <CheckCircleIcon sx={{ mr: 1 }} fontSize="small" />
-                      ) : (
-                        <CancelIcon sx={{ mr: 1 }} fontSize="small" />
-                      )}
-                      {record.status.charAt(0).toUpperCase() + record.status.slice(1)}
-                    </Box>
-                  </TableCell>
-                  <TableCell>{record.checkInTime || '-'}</TableCell>
-                  <TableCell>{record.checkOutTime || '-'}</TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </TableContainer>
-      </Paper>
+      <Typography variant="h5" component="h2" gutterBottom>
+        Recent Attendance
+      </Typography>
+      
+      <Box sx={{ display: 'grid', gap: 2 }}>
+        {recentAttendance.map((record) => (
+          <Card key={record._id}>
+            <CardContent>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <Typography variant="subtitle1">
+                  {record.employee.name}
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  {new Date(record.timestamp).toLocaleString()}
+                </Typography>
+              </Box>
+              <Typography variant="body2" color="text.secondary">
+                Department: {record.employee.department}
+              </Typography>
+              <Typography variant="body2" color={record.type === 'checkIn' ? 'success.main' : 'error.main'}>
+                {record.type === 'checkIn' ? 'Checked In' : 'Checked Out'}
+              </Typography>
+            </CardContent>
+          </Card>
+        ))}
+      </Box>
     </Box>
   );
 };

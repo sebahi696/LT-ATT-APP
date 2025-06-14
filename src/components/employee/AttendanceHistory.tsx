@@ -20,19 +20,9 @@ import {
   Cancel as CancelIcon,
   Warning as WarningIcon
 } from '@mui/icons-material';
-import axios from 'axios';
-
-interface AttendanceRecord {
-  _id: string;
-  date: string;
-  status: 'present' | 'absent' | 'late';
-  checkIn?: {
-    time: string;
-  };
-  checkOut?: {
-    time: string;
-  };
-}
+import { attendanceService } from '../../services/api';
+import { ERROR_MESSAGES } from '../../config';
+import type { Attendance } from '../../types';
 
 interface AttendanceSummary {
   totalDays: number;
@@ -43,7 +33,7 @@ interface AttendanceSummary {
 }
 
 const AttendanceHistory: React.FC = () => {
-  const [records, setRecords] = useState<AttendanceRecord[]>([]);
+  const [records, setRecords] = useState<Attendance[]>([]);
   const [summary, setSummary] = useState<AttendanceSummary | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -51,22 +41,34 @@ const AttendanceHistory: React.FC = () => {
   useEffect(() => {
     const fetchAttendance = async () => {
       try {
-        const token = localStorage.getItem('token');
-        if (!token) {
-          setError('Authentication token not found');
-          return;
-        }
+        const attendanceData = await attendanceService.getAll();
+        
+        // Process attendance data
+        const processedRecords = attendanceData.map(record => ({
+          ...record,
+          date: new Date(record.timestamp).toLocaleDateString(),
+          status: record.type === 'checkIn' ? 'present' : 'absent'
+        }));
 
-        const response = await axios.get('/api/employee/attendance', {
-          headers: { 'x-auth-token': token }
+        // Calculate summary
+        const totalDays = processedRecords.length;
+        const presentDays = processedRecords.filter(r => r.status === 'present').length;
+        const lateDays = processedRecords.filter(r => r.status === 'late').length;
+        const absentDays = totalDays - presentDays - lateDays;
+        const attendancePercentage = (presentDays / totalDays) * 100;
+
+        setRecords(processedRecords);
+        setSummary({
+          totalDays,
+          presentDays,
+          lateDays,
+          absentDays,
+          attendancePercentage
         });
-
-        setRecords(response.data.records);
-        setSummary(response.data.summary);
         setError('');
       } catch (err: any) {
         console.error('Error fetching attendance:', err);
-        setError(err.response?.data?.msg || 'Error fetching attendance records');
+        setError(err.message || ERROR_MESSAGES.DEFAULT);
       } finally {
         setLoading(false);
       }
@@ -154,37 +156,31 @@ const AttendanceHistory: React.FC = () => {
             <TableRow>
               <TableCell>Date</TableCell>
               <TableCell>Status</TableCell>
-              <TableCell>Check In</TableCell>
-              <TableCell>Check Out</TableCell>
+              <TableCell>Time</TableCell>
+              <TableCell>Type</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
             {records.map((record) => (
               <TableRow key={record._id}>
                 <TableCell>
-                  {new Date(record.date).toLocaleDateString()}
+                  {new Date(record.timestamp).toLocaleDateString()}
                 </TableCell>
                 <TableCell>
                   <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                    {record.status === 'present' ? (
+                    {record.type === 'checkIn' ? (
                       <CheckCircleIcon color="success" sx={{ mr: 1 }} />
-                    ) : record.status === 'late' ? (
-                      <WarningIcon color="warning" sx={{ mr: 1 }} />
                     ) : (
                       <CancelIcon color="error" sx={{ mr: 1 }} />
                     )}
-                    {record.status.charAt(0).toUpperCase() + record.status.slice(1)}
+                    {record.type === 'checkIn' ? 'Present' : 'Absent'}
                   </Box>
                 </TableCell>
                 <TableCell>
-                  {record.checkIn?.time
-                    ? new Date(record.checkIn.time).toLocaleTimeString()
-                    : '-'}
+                  {new Date(record.timestamp).toLocaleTimeString()}
                 </TableCell>
                 <TableCell>
-                  {record.checkOut?.time
-                    ? new Date(record.checkOut.time).toLocaleTimeString()
-                    : '-'}
+                  {record.type === 'checkIn' ? 'Check In' : 'Check Out'}
                 </TableCell>
               </TableRow>
             ))}
