@@ -24,12 +24,33 @@ const Dashboard: React.FC = () => {
           dashboardService.getRecentAttendance()
         ]);
 
-        setStats(statsData);
-        setRecentAttendance(attendanceData);
+        // Ensure statsData is valid
+        if (!statsData || typeof statsData !== 'object') {
+          throw new Error('Invalid stats data received');
+        }
+
+        // Ensure attendanceData is an array
+        const validAttendanceData = Array.isArray(attendanceData) ? attendanceData : [];
+
+        setStats({
+          totalEmployees: statsData.totalEmployees || 0,
+          todayAttendance: statsData.todayAttendance || 0,
+          presentToday: statsData.presentToday || 0,
+          absentToday: statsData.absentToday || 0,
+        });
+        setRecentAttendance(validAttendanceData);
         setError('');
       } catch (err: any) {
         console.error('Error fetching dashboard data:', err);
         setError(err.message || ERROR_MESSAGES.DEFAULT);
+        // Set default values in case of error
+        setStats({
+          totalEmployees: 0,
+          todayAttendance: 0,
+          presentToday: 0,
+          absentToday: 0,
+        });
+        setRecentAttendance([]);
       } finally {
         setLoading(false);
       }
@@ -108,26 +129,30 @@ const Dashboard: React.FC = () => {
       </Typography>
       
       <Box sx={{ display: 'grid', gap: 2 }}>
-        {recentAttendance.map((record) => (
-          <Card key={record._id}>
-            <CardContent>
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <Typography variant="subtitle1">
-                  {record.employee.name}
-                </Typography>
+        {Array.isArray(recentAttendance) && recentAttendance.length > 0 ? (
+          recentAttendance.map((record) => (
+            <Card key={record._id}>
+              <CardContent>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <Typography variant="subtitle1">
+                    {record.employee?.name || 'Unknown Employee'}
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    {new Date(record.timestamp).toLocaleString()}
+                  </Typography>
+                </Box>
                 <Typography variant="body2" color="text.secondary">
-                  {new Date(record.timestamp).toLocaleString()}
+                  Department: {record.employee?.department || 'Unknown Department'}
                 </Typography>
-              </Box>
-              <Typography variant="body2" color="text.secondary">
-                Department: {record.employee.department}
-              </Typography>
-              <Typography variant="body2" color={record.type === 'checkIn' ? 'success.main' : 'error.main'}>
-                {record.type === 'checkIn' ? 'Checked In' : 'Checked Out'}
-              </Typography>
-            </CardContent>
-          </Card>
-        ))}
+                <Typography variant="body2" color={record.type === 'checkIn' ? 'success.main' : 'error.main'}>
+                  {record.type === 'checkIn' ? 'Checked In' : 'Checked Out'}
+                </Typography>
+              </CardContent>
+            </Card>
+          ))
+        ) : (
+          <Alert severity="info">No recent attendance records found</Alert>
+        )}
       </Box>
     </Box>
   );
